@@ -151,11 +151,34 @@ def build_image_skin_material(image_file_path):
     return skin_material
 
 
-def apply_skin_material_to_vessel(vessel_object, skin_material):
-    vessel_object.data.materials.clear()
-    vessel_object.data.materials.append(skin_material)
-    for polygon in vessel_object.data.polygons:
-        polygon.material_index = 0
+def build_plain_inner_surface_material():
+    inner_material = bpy.data.materials.new("vessel_inner_surface_plain")
+    inner_material.use_nodes = True
+    principled_shader = inner_material.node_tree.nodes.get("Principled BSDF")
+    principled_shader.inputs["Base Color"].default_value = (0.12, 0.11, 0.10, 1.0)
+    principled_shader.inputs["Roughness"].default_value = 0.85
+    return inner_material
+
+
+def assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material):
+    mesh_data = vessel_object.data
+    mesh_data.materials.clear()
+    mesh_data.materials.append(skin_material)
+    mesh_data.materials.append(inner_material)
+
+    for polygon in mesh_data.polygons:
+        polygon_center_x = sum(mesh_data.vertices[vertex_index].co.x for vertex_index in polygon.vertices) / len(polygon.vertices)
+        polygon_center_y = sum(mesh_data.vertices[vertex_index].co.y for vertex_index in polygon.vertices) / len(polygon.vertices)
+        polygon_radius = math.sqrt(polygon_center_x ** 2 + polygon_center_y ** 2)
+
+        if polygon_radius < 1e-6:
+            polygon.material_index = 1
+            continue
+
+        radial_unit_x = polygon_center_x / polygon_radius
+        radial_unit_y = polygon_center_y / polygon_radius
+        outward_alignment = polygon.normal.x * radial_unit_x + polygon.normal.y * radial_unit_y
+        polygon.material_index = 0 if outward_alignment > 0.0 else 1
 
 
 def determine_vessel_total_height(vessel_object):
@@ -180,7 +203,8 @@ def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_ble
     correct_seam_uv_discontinuity(vessel_object)
 
     skin_material = build_image_skin_material(image_file_path)
-    apply_skin_material_to_vessel(vessel_object, skin_material)
+    inner_material = build_plain_inner_surface_material()
+    assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material)
 
     bpy.ops.wm.save_as_mainfile(filepath=output_blend_file_path)
     return True
