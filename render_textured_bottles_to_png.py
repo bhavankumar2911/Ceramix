@@ -9,7 +9,8 @@ OUTPUT_RENDER_DIRECTORY = "output/bottle_renders"
 RENDER_RESOLUTION_X = 512
 RENDER_RESOLUTION_Y = 512
 RENDER_SAMPLES = 128
-CAMERA_DISTANCE_MULTIPLIER = 2.4
+CAMERA_FRAMING_MARGIN_FACTOR = 1.35
+CAMERA_FIELD_OF_VIEW_DEGREES = 35.0
 CAMERA_AZIMUTH_DEGREES = 35.0
 CAMERA_ELEVATION_DEGREES = 8.0
 SUN_LIGHT_ENERGY = 3.5
@@ -50,8 +51,10 @@ def compute_vessel_bounding_dimensions(vessel_object):
         (minimum_y + maximum_y) / 2.0,
         (minimum_z + maximum_z) / 2.0))
     bounding_height = maximum_z - minimum_z
-    bounding_width = max(maximum_x - minimum_x, maximum_y - minimum_y)
-    return bounding_center, bounding_height, bounding_width
+    horizontal_extent_x = maximum_x - minimum_x
+    horizontal_extent_y = maximum_y - minimum_y
+    bounding_horizontal_diagonal = math.sqrt(horizontal_extent_x ** 2 + horizontal_extent_y ** 2)
+    return bounding_center, bounding_height, bounding_horizontal_diagonal
 
 
 def setup_white_world_background():
@@ -66,9 +69,11 @@ def setup_white_world_background():
         background_node.inputs["Strength"].default_value = WHITE_BACKGROUND_STRENGTH
 
 
-def add_portrait_camera(bounding_center, bounding_height, bounding_width):
-    framing_dimension = max(bounding_height, bounding_width)
-    camera_distance = framing_dimension * CAMERA_DISTANCE_MULTIPLIER
+def add_portrait_camera(bounding_center, bounding_height, bounding_horizontal_diagonal):
+    largest_framing_dimension = max(bounding_height, bounding_horizontal_diagonal)
+    half_field_of_view_radians = math.radians(CAMERA_FIELD_OF_VIEW_DEGREES) / 2.0
+    minimum_camera_distance = (largest_framing_dimension * CAMERA_FRAMING_MARGIN_FACTOR / 2.0) / math.tan(half_field_of_view_radians)
+    camera_distance = minimum_camera_distance
 
     azimuth_radians = math.radians(CAMERA_AZIMUTH_DEGREES)
     elevation_radians = math.radians(CAMERA_ELEVATION_DEGREES)
@@ -88,7 +93,8 @@ def add_portrait_camera(bounding_center, bounding_height, bounding_width):
     direction_to_target = (look_at_target - camera_object.location).normalized()
     camera_object.rotation_euler = direction_to_target.to_track_quat('-Z', 'Y').to_euler()
 
-    camera_object.data.lens = 80.0
+    camera_object.data.lens_unit = 'FOV'
+    camera_object.data.angle = math.radians(CAMERA_FIELD_OF_VIEW_DEGREES)
     camera_object.data.clip_start = 0.001
     camera_object.data.clip_end = 1000.0
 
@@ -148,9 +154,9 @@ def render_single_textured_model(blend_file_path, output_png_path):
         print(f"  No mesh object found in {blend_file_path}, skipping.")
         return False
 
-    bounding_center, bounding_height, bounding_width = compute_vessel_bounding_dimensions(vessel_object)
+    bounding_center, bounding_height, bounding_horizontal_diagonal = compute_vessel_bounding_dimensions(vessel_object)
     setup_white_world_background()
-    add_portrait_camera(bounding_center, bounding_height, bounding_width)
+    add_portrait_camera(bounding_center, bounding_height, bounding_horizontal_diagonal)
     add_top_right_sun_light(bounding_center, bounding_height)
     setup_render_settings(output_png_path)
     bpy.ops.render.render(write_still=True)
