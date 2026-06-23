@@ -57,6 +57,19 @@ def compute_vessel_bounding_dimensions(vessel_object):
     return bounding_center, bounding_height, bounding_horizontal_diagonal
 
 
+def add_shadow_catcher_ground_plane(bounding_center, bounding_height, bounding_horizontal_diagonal):
+    plane_size = max(bounding_height, bounding_horizontal_diagonal) * 6.0
+    ground_z_position = bounding_center.z - bounding_height / 2.0
+
+    bpy.ops.mesh.primitive_plane_add(
+        size=plane_size,
+        location=(bounding_center.x, bounding_center.y, ground_z_position))
+    ground_plane_object = bpy.context.active_object
+    ground_plane_object.name = "ShadowCatcherGround"
+    ground_plane_object.is_shadow_catcher = True
+    return ground_plane_object
+
+
 def setup_white_world_background():
     world = bpy.context.scene.world
     if world is None:
@@ -156,6 +169,7 @@ def render_single_textured_model(blend_file_path, output_png_path):
 
     bounding_center, bounding_height, bounding_horizontal_diagonal = compute_vessel_bounding_dimensions(vessel_object)
     setup_white_world_background()
+    add_shadow_catcher_ground_plane(bounding_center, bounding_height, bounding_horizontal_diagonal)
     add_portrait_camera(bounding_center, bounding_height, bounding_horizontal_diagonal)
     add_top_right_sun_light(bounding_center, bounding_height)
     setup_render_settings(output_png_path)
