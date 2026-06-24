@@ -5,8 +5,8 @@ import sys
 import os
 import glob
 
-INPUT_DIRECTORY = "output/bottle/model"
-OUTPUT_DIRECTORY = "output/bottle/design/flower/1"
+INPUT_DIRECTORY = "output/cup/model"
+OUTPUT_DIRECTORY = "output/cup/design/flower/4"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 
@@ -182,7 +182,6 @@ def assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inn
 
 
 def determine_vessel_total_height(vessel_object):
-    bounding_box_corners = [vessel_object.matrix_world @ corner.co for corner in vessel_object.data.vertices][:1]
     all_z_values = [vertex.co.z for vertex in vessel_object.data.vertices]
     return max(all_z_values) - min(all_z_values)
 
@@ -217,7 +216,7 @@ def find_all_blend_files_in_directory(directory_path):
 def apply_skin_to_all_models():
     image_file_path = read_command_line_arguments()
     if image_file_path is None:
-        print("Usage: blender -b --python apply_skin_to_bottle_models.py -- /path/to/image.png")
+        print("Usage: blender -b --python apply_skin_to_cup_models.py -- /path/to/image.png")
         return
 
     absolute_image_file_path = os.path.abspath(image_file_path)
