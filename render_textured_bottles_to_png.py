@@ -4,17 +4,17 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/bottle_models_textured"
-OUTPUT_RENDER_DIRECTORY = "output/bottle_renders"
-RENDER_RESOLUTION_X = 512
-RENDER_RESOLUTION_Y = 512
+INPUT_DIRECTORY = "output/bottle/design/abstract/5"
+OUTPUT_RENDER_DIRECTORY = "output/bottle/render/abstract/5"
+RENDER_RESOLUTION_X = 1024
+RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 256
 CAMERA_FRAMING_MARGIN_FACTOR = 1.35
 CAMERA_FIELD_OF_VIEW_DEGREES = 35.0
 CAMERA_AZIMUTH_DEGREES = 35.0
-CAMERA_ELEVATION_DEGREES = 16.0
-SUN_LIGHT_ENERGY = 3.5
-WHITE_BACKGROUND_STRENGTH = 1.4
+CAMERA_ELEVATION_DEGREES = 24.0
+SUN_LIGHT_ENERGY = 5.0
+WHITE_BACKGROUND_STRENGTH = 0.9
 
 
 def remove_all_scene_objects():
@@ -140,7 +140,17 @@ def setup_render_settings(output_file_path):
     render_settings.resolution_percentage = 100
     render_settings.film_transparent = False
     render_settings.image_settings.file_format = 'PNG'
+    bpy.context.scene.view_settings.view_transform = 'Standard'
+    bpy.context.scene.view_settings.look = 'None'
+    bpy.context.scene.view_settings.exposure = 0.0
+    bpy.context.scene.view_settings.gamma = 1.0
     bpy.context.scene.cycles.samples = RENDER_SAMPLES
+    bpy.context.scene.cycles.use_denoising = True
+    bpy.context.scene.cycles.denoiser = 'OPENIMAGEDENOISE'
+    bpy.context.scene.cycles.max_bounces = 12
+    bpy.context.scene.cycles.diffuse_bounces = 6
+    bpy.context.scene.cycles.glossy_bounces = 6
+    bpy.context.scene.cycles.transmission_bounces = 6
     try:
         bpy.context.scene.cycles.device = 'GPU'
     except Exception:

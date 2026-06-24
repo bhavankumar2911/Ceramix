@@ -5,8 +5,8 @@ import sys
 import os
 import glob
 
-INPUT_DIRECTORY = "output/bottle_models"
-OUTPUT_DIRECTORY = "output/bottle_models_textured"
+INPUT_DIRECTORY = "output/bottle/model"
+OUTPUT_DIRECTORY = "output/bottle/design/abstract/5"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 
@@ -147,7 +147,7 @@ def build_image_skin_material(image_file_path):
     node_tree.links.new(image_texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
     node_tree.links.new(principled_bsdf_node.outputs['BSDF'], material_output_node.inputs['Surface'])
 
-    principled_bsdf_node.inputs['Roughness'].default_value = 0.55
+    principled_bsdf_node.inputs['Roughness'].default_value = 0.35
     return skin_material
 
 

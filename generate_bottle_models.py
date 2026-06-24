@@ -6,7 +6,7 @@ import sys
 import os
 from mathutils import Vector
 
-OUTPUT_DIRECTORY = "output/bottle_models"
+OUTPUT_DIRECTORY = "output/bottle/model"
 BASE_RANDOM_SEED = 42
 REVOLUTION_SEGMENT_COUNT = 96
 WALL_VERTICAL_SEGMENT_COUNT = 64
