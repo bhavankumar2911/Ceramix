@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/cup/model"
-OUTPUT_DIRECTORY = "output/cup/design/flower/4"
+OUTPUT_DIRECTORY = "output/cup/design/circle/1"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 
@@ -72,20 +72,7 @@ def compute_arc_length_corrected_height_rings(vessel_object):
     return normalized_arc_length_at_height, total_arc_length
 
 
-def estimate_average_circumference(vessel_object):
-    mesh_data = vessel_object.data
-    outer_radius_at_height = {}
-    for vertex in mesh_data.vertices:
-        vertex_radius = math.sqrt(vertex.co.x ** 2 + vertex.co.y ** 2)
-        rounded_height = round(vertex.co.z, 5)
-        if rounded_height not in outer_radius_at_height or vertex_radius > outer_radius_at_height[rounded_height]:
-            outer_radius_at_height[rounded_height] = vertex_radius
-    outer_radius_values = list(outer_radius_at_height.values())
-    average_radius = sum(outer_radius_values) / len(outer_radius_values) if outer_radius_values else 0.01
-    return 2.0 * math.pi * average_radius
-
-
-def apply_arc_length_corrected_cylindrical_unwrap(vessel_object, total_height):
+def apply_arc_length_corrected_cylindrical_unwrap(vessel_object):
     normalized_arc_length_at_height, total_arc_length = compute_arc_length_corrected_height_rings(vessel_object)
 
     if not vessel_object.data.uv_layers:
@@ -181,11 +168,6 @@ def assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inn
         polygon.material_index = 0 if outward_alignment > 0.0 else 1
 
 
-def determine_vessel_total_height(vessel_object):
-    all_z_values = [vertex.co.z for vertex in vessel_object.data.vertices]
-    return max(all_z_values) - min(all_z_values)
-
-
 def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_blend_file_path):
     remove_all_scene_objects()
     bpy.ops.wm.open_mainfile(filepath=blend_file_path)
@@ -196,9 +178,8 @@ def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_ble
         return False
 
     make_object_the_only_active_selection(vessel_object)
-    total_height = determine_vessel_total_height(vessel_object)
 
-    apply_arc_length_corrected_cylindrical_unwrap(vessel_object, total_height)
+    apply_arc_length_corrected_cylindrical_unwrap(vessel_object)
     correct_seam_uv_discontinuity(vessel_object)
 
     skin_material = build_image_skin_material(image_file_path)

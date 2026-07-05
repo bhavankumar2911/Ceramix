@@ -4,8 +4,8 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/cup/design/flower/4"
-OUTPUT_RENDER_DIRECTORY = "output/cup/render/flower/4"
+INPUT_DIRECTORY = "output/cup/design/circle/1"
+OUTPUT_RENDER_DIRECTORY = "output/cup/render/circle/1"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 256
@@ -13,8 +13,8 @@ CAMERA_FRAMING_MARGIN_FACTOR = 1.35
 CAMERA_FIELD_OF_VIEW_DEGREES = 35.0
 CAMERA_AZIMUTH_DEGREES = 35.0
 CAMERA_ELEVATION_DEGREES = 24.0
-SUN_LIGHT_ENERGY = 5.0
-WHITE_BACKGROUND_STRENGTH = 0.9
+SUN_LIGHT_ENERGY = 2.5
+WHITE_BACKGROUND_STRENGTH = 0.6
 
 
 def remove_all_scene_objects():
@@ -142,7 +142,7 @@ def setup_render_settings(output_file_path):
     render_settings.image_settings.file_format = 'PNG'
     bpy.context.scene.view_settings.view_transform = 'Standard'
     bpy.context.scene.view_settings.look = 'None'
-    bpy.context.scene.view_settings.exposure = 0.0
+    bpy.context.scene.view_settings.exposure = -0.6
     bpy.context.scene.view_settings.gamma = 1.0
     bpy.context.scene.cycles.samples = RENDER_SAMPLES
     bpy.context.scene.cycles.use_denoising = True

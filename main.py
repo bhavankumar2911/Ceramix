@@ -2,12 +2,23 @@ import subprocess
 import re
 import os
 import glob
+import argparse
 
 BLENDER_EXECUTABLE_PATH = "/Applications/Blender.app/Contents/MacOS/Blender"
 INPUT_DESIGN_ROOT_DIRECTORY = "input/design"
-REQUESTED_MODEL_COUNT_PER_VESSEL_TYPE = 5
 
-VESSEL_TYPE_NAMES = ["ewer", "mug", "cup", "bottle"]
+# VESSEL_TYPE_NAMES = ["ewer", "mug", "cup", "bottle"]
+VESSEL_TYPE_NAMES = ["cup"]
+
+
+def parse_pipeline_arguments():
+    argument_parser = argparse.ArgumentParser(description="Run the full vessel dataset generation pipeline.")
+    argument_parser.add_argument(
+        "--instances",
+        type=int,
+        default=20,
+        help="Number of model instances to generate per vessel type (default: 20)")
+    return argument_parser.parse_args()
 
 
 def derive_script_paths_for_vessel_type(vessel_type_name):
@@ -58,14 +69,14 @@ def derive_design_category_and_name(design_image_path):
     return design_category, design_name
 
 
-def generate_models_for_vessel_type(vessel_type_name, script_paths, directory_paths):
+def generate_models_for_vessel_type(vessel_type_name, script_paths, directory_paths, requested_instance_count):
     model_directory = directory_paths["model"]
     if os.path.isdir(model_directory) and len(glob.glob(os.path.join(model_directory, "*.blend"))) > 0:
         print(f"{vessel_type_name} models already exist in {model_directory}, skipping generation.")
         return True
 
     patch_constant_in_script(script_paths["generate"], "OUTPUT_DIRECTORY", model_directory)
-    return run_blender_script(script_paths["generate"], [str(REQUESTED_MODEL_COUNT_PER_VESSEL_TYPE)])
+    return run_blender_script(script_paths["generate"], [str(requested_instance_count)])
 
 
 def apply_skin_for_design(script_paths, directory_paths, design_image_path, design_output_directory):
@@ -80,7 +91,7 @@ def render_design(script_paths, design_output_directory, render_output_directory
     return run_blender_script(script_paths["render"], [])
 
 
-def process_single_vessel_type(vessel_type_name, design_image_paths):
+def process_single_vessel_type(vessel_type_name, design_image_paths, requested_instance_count):
     script_paths = derive_script_paths_for_vessel_type(vessel_type_name)
     directory_paths = derive_directory_paths_for_vessel_type(vessel_type_name)
 
@@ -89,7 +100,7 @@ def process_single_vessel_type(vessel_type_name, design_image_paths):
             print(f"Skipping vessel type '{vessel_type_name}': missing script {required_script_path}")
             return 0, 0
 
-    generation_succeeded = generate_models_for_vessel_type(vessel_type_name, script_paths, directory_paths)
+    generation_succeeded = generate_models_for_vessel_type(vessel_type_name, script_paths, directory_paths, requested_instance_count)
     if not generation_succeeded:
         print(f"Model generation failed for vessel type '{vessel_type_name}', skipping its designs.")
         return 0, len(design_image_paths)
@@ -118,16 +129,20 @@ def process_single_vessel_type(vessel_type_name, design_image_paths):
 
 
 def run_full_pipeline_for_all_vessel_types():
+    parsed_arguments = parse_pipeline_arguments()
+    requested_instance_count = parsed_arguments.instances
+
     design_image_paths = find_all_design_image_paths()
     if not design_image_paths:
         print(f"No design images found under {INPUT_DESIGN_ROOT_DIRECTORY}")
         return
 
     print(f"Found {len(design_image_paths)} design images across {len(VESSEL_TYPE_NAMES)} vessel types.")
+    print(f"Generating {requested_instance_count} instances per vessel type.")
 
     overall_summary = {}
     for vessel_type_name in VESSEL_TYPE_NAMES:
-        successfully_processed_count, total_design_count = process_single_vessel_type(vessel_type_name, design_image_paths)
+        successfully_processed_count, total_design_count = process_single_vessel_type(vessel_type_name, design_image_paths, requested_instance_count)
         overall_summary[vessel_type_name] = (successfully_processed_count, total_design_count)
 
     print("\n=== Pipeline summary ===")

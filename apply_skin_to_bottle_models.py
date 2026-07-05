@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/bottle/model"
-OUTPUT_DIRECTORY = "output/bottle/design/flower/1"
+OUTPUT_DIRECTORY = "output/bottle/design/circle/1"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 
