@@ -4,8 +4,8 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/cup/design/circle/2"
-OUTPUT_RENDER_DIRECTORY = "output/cup/render/circle/2"
+INPUT_DIRECTORY = "output/cup/design/circle/6"
+OUTPUT_RENDER_DIRECTORY = "output/cup/render/circle/6"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 512
