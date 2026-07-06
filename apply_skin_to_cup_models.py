@@ -211,9 +211,16 @@ def apply_skin_to_all_models():
 
     print(f"Applying skin from {absolute_image_file_path} to {len(blend_files)} models...")
     successfully_textured_count = 0
+    already_textured_skipped_count = 0
     for blend_file_index, blend_file_path in enumerate(blend_files):
         model_filename = os.path.basename(blend_file_path)
         output_blend_file_path = os.path.join(absolute_output_directory, model_filename)
+
+        if os.path.isfile(output_blend_file_path):
+            print(f"  [{blend_file_index + 1}/{len(blend_files)}] Skipping {model_filename}, already textured")
+            already_textured_skipped_count += 1
+            continue
+
         try:
             absolute_blend_file_path = os.path.abspath(blend_file_path)
             success = apply_skin_to_single_blend_file(absolute_blend_file_path, absolute_image_file_path, output_blend_file_path)
@@ -223,7 +230,7 @@ def apply_skin_to_all_models():
         except Exception as error:
             print(f"  Error texturing {blend_file_path}: {error}")
 
-    print(f"\nSkin application complete. Total textured: {successfully_textured_count}")
+    print(f"\nSkin application complete. Newly textured: {successfully_textured_count}, skipped as already present: {already_textured_skipped_count}")
 
 
 apply_skin_to_all_models()

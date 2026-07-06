@@ -39,13 +39,22 @@ def make_object_the_only_active_selection(target_object):
     bpy.context.view_layer.objects.active = target_object
 
 
-def create_ceramic_placeholder_material():
-    ceramic_material = bpy.data.materials.new("ceramic_base_placeholder")
-    ceramic_material.use_nodes = True
-    principled_shader = ceramic_material.node_tree.nodes.get("Principled BSDF")
-    principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
-    principled_shader.inputs["Roughness"].default_value = 0.55
-    return ceramic_material
+def create_bottle_body_ceramic_placeholder_material():
+    bottle_body_ceramic_material = bpy.data.materials.new("bottle_body_ceramic_placeholder")
+    bottle_body_ceramic_material.use_nodes = True
+    bottle_body_principled_shader = bottle_body_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    bottle_body_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    bottle_body_principled_shader.inputs["Roughness"].default_value = 0.55
+    return bottle_body_ceramic_material
+
+
+def create_bottle_neck_ceramic_placeholder_material():
+    bottle_neck_ceramic_material = bpy.data.materials.new("bottle_neck_ceramic_placeholder")
+    bottle_neck_ceramic_material.use_nodes = True
+    bottle_neck_principled_shader = bottle_neck_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    bottle_neck_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    bottle_neck_principled_shader.inputs["Roughness"].default_value = 0.55
+    return bottle_neck_ceramic_material
 
 
 def recalculate_outward_face_normals(target_object):
@@ -152,17 +161,25 @@ def create_revolved_hollow_body(profile_vertices, wall_thickness):
     return body_object
 
 
-def finalize_ceramic_object(bottle_object, model_index, ceramic_material):
+def finalize_ceramic_object(bottle_object, model_index, bottle_body_ceramic_material,
+                            bottle_neck_ceramic_material, absolute_neck_start_height):
     recalculate_outward_face_normals(bottle_object)
     make_object_the_only_active_selection(bottle_object)
     bpy.ops.object.shade_smooth()
     subdivision_modifier = bottle_object.modifiers.new("Subdivision", "SUBSURF")
     subdivision_modifier.levels = SUBDIVISION_VIEWPORT_LEVEL
     subdivision_modifier.render_levels = SUBDIVISION_RENDER_LEVEL
+
     bottle_object.data.materials.clear()
-    bottle_object.data.materials.append(ceramic_material)
-    for polygon in bottle_object.data.polygons:
-        polygon.material_index = 0
+    bottle_object.data.materials.append(bottle_body_ceramic_material)
+    bottle_object.data.materials.append(bottle_neck_ceramic_material)
+
+    mesh_data = bottle_object.data
+    for polygon in mesh_data.polygons:
+        polygon_center_z = sum(mesh_data.vertices[vertex_index].co.z for vertex_index in polygon.vertices) / len(polygon.vertices)
+        polygon.material_index = 1 if polygon_center_z >= absolute_neck_start_height else 0
+
+    bottle_object["absolute_neck_start_height"] = absolute_neck_start_height
     bottle_object.name = "bottle_{:03d}".format(model_index)
     bottle_object.data.name = "bottle_{:03d}_mesh".format(model_index)
 
@@ -215,24 +232,42 @@ def build_single_unique_bottle(model_index):
     profile_vertices = build_body_outer_profile_vertices(bottle_height, profile_radius_function)
     body_object = create_revolved_hollow_body(profile_vertices, wall_thickness)
 
-    ceramic_material = create_ceramic_placeholder_material()
-    finalize_ceramic_object(body_object, model_index, ceramic_material)
+    absolute_neck_start_height = neck_start_fraction * bottle_height
+    bottle_body_ceramic_material = create_bottle_body_ceramic_placeholder_material()
+    bottle_neck_ceramic_material = create_bottle_neck_ceramic_placeholder_material()
+    finalize_ceramic_object(body_object, model_index, bottle_body_ceramic_material,
+                            bottle_neck_ceramic_material, absolute_neck_start_height)
+
+
+def determine_expected_blend_file_path(model_index):
+    absolute_output_directory = os.path.abspath(OUTPUT_DIRECTORY)
+    return os.path.join(absolute_output_directory, "bottle_{:03d}.blend".format(model_index))
 
 
 def save_current_scene_as_blend_file(model_index):
     absolute_output_directory = os.path.abspath(OUTPUT_DIRECTORY)
     os.makedirs(absolute_output_directory, exist_ok=True)
-    blend_file_path = os.path.join(absolute_output_directory, "bottle_{:03d}.blend".format(model_index))
+    blend_file_path = determine_expected_blend_file_path(model_index)
     bpy.ops.wm.save_as_mainfile(filepath=blend_file_path)
 
 
 def generate_requested_bottle_models():
     requested_model_count = read_requested_model_count_from_command_arguments()
+    already_generated_count = 0
+    newly_generated_count = 0
     for model_index in range(requested_model_count):
+        expected_blend_file_path = determine_expected_blend_file_path(model_index)
+        if os.path.isfile(expected_blend_file_path):
+            print(f"  [{model_index + 1}/{requested_model_count}] Skipping bottle_{model_index:03d}.blend, already generated")
+            already_generated_count += 1
+            continue
         remove_all_scene_objects()
         random.seed(BASE_RANDOM_SEED + model_index)
         build_single_unique_bottle(model_index)
         save_current_scene_as_blend_file(model_index)
+        print(f"  [{model_index + 1}/{requested_model_count}] Generated bottle_{model_index:03d}.blend")
+        newly_generated_count += 1
+    print(f"\nGeneration complete. Newly generated: {newly_generated_count}, skipped as already present: {already_generated_count}")
 
 
 generate_requested_bottle_models()

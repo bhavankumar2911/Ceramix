@@ -168,20 +168,35 @@ def build_single_unique_cup(model_index):
     finalize_ceramic_object(body_object, model_index, ceramic_material)
 
 
+def determine_expected_blend_file_path(model_index):
+    absolute_output_directory = os.path.abspath(OUTPUT_DIRECTORY)
+    return os.path.join(absolute_output_directory, "cup_{:03d}.blend".format(model_index))
+
+
 def save_current_scene_as_blend_file(model_index):
     absolute_output_directory = os.path.abspath(OUTPUT_DIRECTORY)
     os.makedirs(absolute_output_directory, exist_ok=True)
-    blend_file_path = os.path.join(absolute_output_directory, "cup_{:03d}.blend".format(model_index))
+    blend_file_path = determine_expected_blend_file_path(model_index)
     bpy.ops.wm.save_as_mainfile(filepath=blend_file_path)
 
 
 def generate_requested_cup_models():
     requested_model_count = read_requested_model_count_from_command_arguments()
+    already_generated_count = 0
+    newly_generated_count = 0
     for model_index in range(requested_model_count):
+        expected_blend_file_path = determine_expected_blend_file_path(model_index)
+        if os.path.isfile(expected_blend_file_path):
+            print(f"  [{model_index + 1}/{requested_model_count}] Skipping cup_{model_index:03d}.blend, already generated")
+            already_generated_count += 1
+            continue
         remove_all_scene_objects()
         random.seed(BASE_RANDOM_SEED + model_index)
         build_single_unique_cup(model_index)
         save_current_scene_as_blend_file(model_index)
+        print(f"  [{model_index + 1}/{requested_model_count}] Generated cup_{model_index:03d}.blend")
+        newly_generated_count += 1
+    print(f"\nGeneration complete. Newly generated: {newly_generated_count}, skipped as already present: {already_generated_count}")
 
 
 generate_requested_cup_models()

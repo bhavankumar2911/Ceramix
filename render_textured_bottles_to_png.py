@@ -4,17 +4,17 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/bottle/design/circle/1"
-OUTPUT_RENDER_DIRECTORY = "output/bottle/render/circle/1"
+INPUT_DIRECTORY = "output/bottle/design/circle/5"
+OUTPUT_RENDER_DIRECTORY = "output/bottle/render/circle/5"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
-RENDER_SAMPLES = 256
+RENDER_SAMPLES = 512
 CAMERA_FRAMING_MARGIN_FACTOR = 1.35
 CAMERA_FIELD_OF_VIEW_DEGREES = 35.0
 CAMERA_AZIMUTH_DEGREES = 35.0
 CAMERA_ELEVATION_DEGREES = 24.0
-SUN_LIGHT_ENERGY = 5.0
-WHITE_BACKGROUND_STRENGTH = 0.9
+SUN_LIGHT_ENERGY = 2.5
+WHITE_BACKGROUND_STRENGTH = 0.6
 
 
 def remove_all_scene_objects():
@@ -142,7 +142,7 @@ def setup_render_settings(output_file_path):
     render_settings.image_settings.file_format = 'PNG'
     bpy.context.scene.view_settings.view_transform = 'Standard'
     bpy.context.scene.view_settings.look = 'None'
-    bpy.context.scene.view_settings.exposure = 0.0
+    bpy.context.scene.view_settings.exposure = -0.6
     bpy.context.scene.view_settings.gamma = 1.0
     bpy.context.scene.cycles.samples = RENDER_SAMPLES
     bpy.context.scene.cycles.use_denoising = True
@@ -158,14 +158,24 @@ def setup_render_settings(output_file_path):
 
 
 def enable_gpu_rendering():
-    try:
-        cycles_preferences = bpy.context.preferences.addons['cycles'].preferences
-        cycles_preferences.compute_device_type = 'METAL'
-        cycles_preferences.get_devices()
-        for compute_device in cycles_preferences.devices:
-            compute_device.use = True
-    except Exception as error:
-        print(f"Metal GPU unavailable ({error}), rendering on CPU.")
+    compute_device_type_priority_order = ['OPTIX', 'CUDA', 'HIP', 'ONEAPI', 'METAL']
+    cycles_preferences = bpy.context.preferences.addons['cycles'].preferences
+
+    for candidate_compute_device_type in compute_device_type_priority_order:
+        try:
+            cycles_preferences.compute_device_type = candidate_compute_device_type
+            cycles_preferences.get_devices()
+            available_compute_devices = list(cycles_preferences.devices)
+            if len(available_compute_devices) == 0:
+                continue
+            for compute_device in available_compute_devices:
+                compute_device.use = True
+            print(f"GPU rendering enabled using {candidate_compute_device_type}.")
+            return
+        except TypeError:
+            continue
+
+    print("No supported GPU compute device found, rendering on CPU.")
 
 
 def render_single_textured_model(blend_file_path, output_png_path):
@@ -202,12 +212,19 @@ def render_all_textured_models():
         print(f"No .blend files found in {INPUT_DIRECTORY}")
         return
 
-    print(f"Rendering {len(blend_files)} textured models to {absolute_output_directory}...")
+    print(f"Found {len(blend_files)} textured models in {INPUT_DIRECTORY}...")
     successfully_rendered_count = 0
+    already_rendered_skipped_count = 0
     for blend_file_index, blend_file_path in enumerate(blend_files):
         model_filename = os.path.basename(blend_file_path)
         model_base_name = os.path.splitext(model_filename)[0]
         output_png_path = os.path.join(absolute_output_directory, f"{model_base_name}.png")
+
+        if os.path.isfile(output_png_path):
+            print(f"  [{blend_file_index + 1}/{len(blend_files)}] Skipping {model_base_name}.png, already rendered")
+            already_rendered_skipped_count += 1
+            continue
+
         try:
             absolute_blend_file_path = os.path.abspath(blend_file_path)
             success = render_single_textured_model(absolute_blend_file_path, output_png_path)
@@ -217,7 +234,7 @@ def render_all_textured_models():
         except Exception as error:
             print(f"  Error rendering {blend_file_path}: {error}")
 
-    print(f"\nRender complete. Total rendered: {successfully_rendered_count}")
+    print(f"\nRender complete. Newly rendered: {successfully_rendered_count}, skipped as already present: {already_rendered_skipped_count}")
 
 
 render_all_textured_models()

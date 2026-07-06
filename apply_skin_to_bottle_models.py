@@ -6,8 +6,9 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/bottle/model"
-OUTPUT_DIRECTORY = "output/bottle/design/circle/1"
-TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
+OUTPUT_DIRECTORY = "output/bottle/design/circle/5"
+BODY_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
+NECK_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 0.5
 
 
 def read_command_line_arguments():
@@ -39,10 +40,26 @@ def find_primary_vessel_mesh_object():
     return max(mesh_objects, key=lambda obj: len(obj.data.vertices))
 
 
-def compute_arc_length_corrected_height_rings(vessel_object):
-    mesh_data = vessel_object.data
+def find_material_slot_index_by_name(mesh_data, material_name):
+    for material_slot_index, material_slot in enumerate(mesh_data.materials):
+        if material_slot is not None and material_slot.name.startswith(material_name):
+            return material_slot_index
+    return None
+
+
+def collect_region_vertex_indices(mesh_data, region_material_slot_index):
+    region_vertex_index_set = set()
+    for polygon in mesh_data.polygons:
+        if polygon.material_index == region_material_slot_index:
+            for vertex_index in polygon.vertices:
+                region_vertex_index_set.add(vertex_index)
+    return region_vertex_index_set
+
+
+def compute_arc_length_normalized_height_within_region(mesh_data, region_vertex_index_set):
     outer_radius_at_height = {}
-    for vertex in mesh_data.vertices:
+    for vertex_index in region_vertex_index_set:
+        vertex = mesh_data.vertices[vertex_index]
         vertex_radius = math.sqrt(vertex.co.x ** 2 + vertex.co.y ** 2)
         rounded_height = round(vertex.co.z, 5)
         if rounded_height not in outer_radius_at_height or vertex_radius > outer_radius_at_height[rounded_height]:
@@ -69,31 +86,18 @@ def compute_arc_length_corrected_height_rings(vessel_object):
         height_value: arc_length / total_arc_length
         for height_value, arc_length in cumulative_arc_length_at_height.items()}
 
-    return normalized_arc_length_at_height, total_arc_length
+    return normalized_arc_length_at_height
 
 
-def estimate_average_circumference(vessel_object):
-    mesh_data = vessel_object.data
-    outer_radius_at_height = {}
-    for vertex in mesh_data.vertices:
-        vertex_radius = math.sqrt(vertex.co.x ** 2 + vertex.co.y ** 2)
-        rounded_height = round(vertex.co.z, 5)
-        if rounded_height not in outer_radius_at_height or vertex_radius > outer_radius_at_height[rounded_height]:
-            outer_radius_at_height[rounded_height] = vertex_radius
-    outer_radius_values = list(outer_radius_at_height.values())
-    average_radius = sum(outer_radius_values) / len(outer_radius_values) if outer_radius_values else 0.01
-    return 2.0 * math.pi * average_radius
+def apply_arc_length_corrected_cylindrical_unwrap_to_region(mesh_data, region_vertex_index_set,
+                                                            region_material_slot_index,
+                                                            region_texture_repeat_around_circumference,
+                                                            active_uv_layer):
+    normalized_arc_length_at_height = compute_arc_length_normalized_height_within_region(mesh_data, region_vertex_index_set)
 
-
-def apply_arc_length_corrected_cylindrical_unwrap(vessel_object, total_height):
-    normalized_arc_length_at_height, total_arc_length = compute_arc_length_corrected_height_rings(vessel_object)
-
-    if not vessel_object.data.uv_layers:
-        vessel_object.data.uv_layers.new(name="vessel_skin_uv")
-    active_uv_layer = vessel_object.data.uv_layers.active
-
-    mesh_data = vessel_object.data
     for polygon in mesh_data.polygons:
+        if polygon.material_index != region_material_slot_index:
+            continue
         for loop_index in polygon.loop_indices:
             loop = mesh_data.loops[loop_index]
             vertex = mesh_data.vertices[loop.vertex_index]
@@ -109,27 +113,30 @@ def apply_arc_length_corrected_cylindrical_unwrap(vessel_object, total_height):
                 closest_height = min(normalized_arc_length_at_height.keys(), key=lambda h: abs(h - rounded_height))
                 normalized_height = normalized_arc_length_at_height[closest_height]
 
-            uv_u = normalized_azimuth * TEXTURE_REPEAT_AROUND_CIRCUMFERENCE
+            uv_u = normalized_azimuth * region_texture_repeat_around_circumference
             uv_v = normalized_height
 
             active_uv_layer.data[loop_index].uv = (uv_u, uv_v)
 
 
-def correct_seam_uv_discontinuity(vessel_object):
-    mesh_data = vessel_object.data
-    active_uv_layer = mesh_data.uv_layers.active
+def correct_seam_uv_discontinuity_within_region(mesh_data, region_material_slot_index,
+                                                region_texture_repeat_around_circumference,
+                                                active_uv_layer):
+    half_repeat_threshold = region_texture_repeat_around_circumference / 2.0
     for polygon in mesh_data.polygons:
+        if polygon.material_index != region_material_slot_index:
+            continue
         loop_uv_values = [active_uv_layer.data[loop_index].uv[0] for loop_index in polygon.loop_indices]
         maximum_u_difference = max(loop_uv_values) - min(loop_uv_values)
-        if maximum_u_difference > 0.5:
+        if maximum_u_difference > half_repeat_threshold:
             for loop_index in polygon.loop_indices:
                 current_uv = active_uv_layer.data[loop_index].uv
-                if current_uv[0] < 0.5:
-                    active_uv_layer.data[loop_index].uv = (current_uv[0] + 1.0, current_uv[1])
+                if current_uv[0] < half_repeat_threshold:
+                    active_uv_layer.data[loop_index].uv = (current_uv[0] + region_texture_repeat_around_circumference, current_uv[1])
 
 
-def build_image_skin_material(image_file_path):
-    skin_material = bpy.data.materials.new("vessel_skin_material")
+def build_image_skin_material(image_file_path, material_name):
+    skin_material = bpy.data.materials.new(material_name)
     skin_material.use_nodes = True
     node_tree = skin_material.node_tree
     node_tree.nodes.clear()
@@ -141,7 +148,7 @@ def build_image_skin_material(image_file_path):
 
     loaded_image = bpy.data.images.load(image_file_path)
     image_texture_node.image = loaded_image
-    image_texture_node.extension = 'EXTEND'
+    image_texture_node.extension = 'REPEAT'
 
     node_tree.links.new(texture_coordinate_node.outputs['UV'], image_texture_node.inputs['Vector'])
     node_tree.links.new(image_texture_node.outputs['Color'], principled_bsdf_node.inputs['Base Color'])
@@ -151,40 +158,43 @@ def build_image_skin_material(image_file_path):
     return skin_material
 
 
-def build_plain_inner_surface_material():
-    inner_material = bpy.data.materials.new("vessel_inner_surface_plain")
-    inner_material.use_nodes = True
-    principled_shader = inner_material.node_tree.nodes.get("Principled BSDF")
-    principled_shader.inputs["Base Color"].default_value = (0.12, 0.11, 0.10, 1.0)
-    principled_shader.inputs["Roughness"].default_value = 0.85
-    return inner_material
+def build_light_ceramic_inner_surface_material():
+    inner_ceramic_material = bpy.data.materials.new("vessel_inner_surface_ceramic")
+    inner_ceramic_material.use_nodes = True
+    inner_ceramic_principled_shader = inner_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    inner_ceramic_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    inner_ceramic_principled_shader.inputs["Roughness"].default_value = 0.55
+    return inner_ceramic_material
 
 
-def assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material):
-    mesh_data = vessel_object.data
+def assign_polygons_to_body_skin_neck_skin_or_inner_material(mesh_data, original_material_index_per_polygon,
+                                                             original_body_material_slot_index,
+                                                             original_neck_material_slot_index,
+                                                             body_skin_material, neck_skin_material,
+                                                             inner_ceramic_material):
     mesh_data.materials.clear()
-    mesh_data.materials.append(skin_material)
-    mesh_data.materials.append(inner_material)
+    mesh_data.materials.append(body_skin_material)
+    mesh_data.materials.append(neck_skin_material)
+    mesh_data.materials.append(inner_ceramic_material)
 
-    for polygon in mesh_data.polygons:
+    for polygon, original_material_index in zip(mesh_data.polygons, original_material_index_per_polygon):
         polygon_center_x = sum(mesh_data.vertices[vertex_index].co.x for vertex_index in polygon.vertices) / len(polygon.vertices)
         polygon_center_y = sum(mesh_data.vertices[vertex_index].co.y for vertex_index in polygon.vertices) / len(polygon.vertices)
         polygon_radius = math.sqrt(polygon_center_x ** 2 + polygon_center_y ** 2)
 
         if polygon_radius < 1e-6:
-            polygon.material_index = 1
+            polygon.material_index = 2
             continue
 
         radial_unit_x = polygon_center_x / polygon_radius
         radial_unit_y = polygon_center_y / polygon_radius
         outward_alignment = polygon.normal.x * radial_unit_x + polygon.normal.y * radial_unit_y
-        polygon.material_index = 0 if outward_alignment > 0.0 else 1
 
+        if outward_alignment <= 0.0:
+            polygon.material_index = 2
+            continue
 
-def determine_vessel_total_height(vessel_object):
-    bounding_box_corners = [vessel_object.matrix_world @ corner.co for corner in vessel_object.data.vertices][:1]
-    all_z_values = [vertex.co.z for vertex in vessel_object.data.vertices]
-    return max(all_z_values) - min(all_z_values)
+        polygon.material_index = 0 if original_material_index == original_body_material_slot_index else 1
 
 
 def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_blend_file_path):
@@ -197,14 +207,43 @@ def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_ble
         return False
 
     make_object_the_only_active_selection(vessel_object)
-    total_height = determine_vessel_total_height(vessel_object)
+    mesh_data = vessel_object.data
 
-    apply_arc_length_corrected_cylindrical_unwrap(vessel_object, total_height)
-    correct_seam_uv_discontinuity(vessel_object)
+    original_body_material_slot_index = find_material_slot_index_by_name(mesh_data, "bottle_body_ceramic_placeholder")
+    original_neck_material_slot_index = find_material_slot_index_by_name(mesh_data, "bottle_neck_ceramic_placeholder")
 
-    skin_material = build_image_skin_material(image_file_path)
-    inner_material = build_plain_inner_surface_material()
-    assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material)
+    if original_body_material_slot_index is None or original_neck_material_slot_index is None:
+        print(f"  No body or neck material found in {blend_file_path}, skipping.")
+        return False
+
+    original_material_index_per_polygon = [polygon.material_index for polygon in mesh_data.polygons]
+    body_vertex_index_set = collect_region_vertex_indices(mesh_data, original_body_material_slot_index)
+    neck_vertex_index_set = collect_region_vertex_indices(mesh_data, original_neck_material_slot_index)
+
+    if not mesh_data.uv_layers:
+        mesh_data.uv_layers.new(name="vessel_skin_uv")
+    active_uv_layer = mesh_data.uv_layers.active
+
+    apply_arc_length_corrected_cylindrical_unwrap_to_region(
+        mesh_data, body_vertex_index_set, original_body_material_slot_index,
+        BODY_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE, active_uv_layer)
+    apply_arc_length_corrected_cylindrical_unwrap_to_region(
+        mesh_data, neck_vertex_index_set, original_neck_material_slot_index,
+        NECK_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE, active_uv_layer)
+
+    correct_seam_uv_discontinuity_within_region(
+        mesh_data, original_body_material_slot_index, BODY_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE, active_uv_layer)
+    correct_seam_uv_discontinuity_within_region(
+        mesh_data, original_neck_material_slot_index, NECK_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE, active_uv_layer)
+
+    body_skin_material = build_image_skin_material(image_file_path, "bottle_body_skin_material")
+    neck_skin_material = build_image_skin_material(image_file_path, "bottle_neck_skin_material")
+    inner_ceramic_material = build_light_ceramic_inner_surface_material()
+
+    assign_polygons_to_body_skin_neck_skin_or_inner_material(
+        mesh_data, original_material_index_per_polygon,
+        original_body_material_slot_index, original_neck_material_slot_index,
+        body_skin_material, neck_skin_material, inner_ceramic_material)
 
     bpy.ops.wm.save_as_mainfile(filepath=output_blend_file_path)
     return True
@@ -231,9 +270,16 @@ def apply_skin_to_all_models():
 
     print(f"Applying skin from {absolute_image_file_path} to {len(blend_files)} models...")
     successfully_textured_count = 0
+    already_textured_skipped_count = 0
     for blend_file_index, blend_file_path in enumerate(blend_files):
         model_filename = os.path.basename(blend_file_path)
         output_blend_file_path = os.path.join(absolute_output_directory, model_filename)
+
+        if os.path.isfile(output_blend_file_path):
+            print(f"  [{blend_file_index + 1}/{len(blend_files)}] Skipping {model_filename}, already textured")
+            already_textured_skipped_count += 1
+            continue
+
         try:
             absolute_blend_file_path = os.path.abspath(blend_file_path)
             success = apply_skin_to_single_blend_file(absolute_blend_file_path, absolute_image_file_path, output_blend_file_path)
@@ -243,7 +289,7 @@ def apply_skin_to_all_models():
         except Exception as error:
             print(f"  Error texturing {blend_file_path}: {error}")
 
-    print(f"\nSkin application complete. Total textured: {successfully_textured_count}")
+    print(f"\nSkin application complete. Newly textured: {successfully_textured_count}, skipped as already present: {already_textured_skipped_count}")
 
 
 apply_skin_to_all_models()
