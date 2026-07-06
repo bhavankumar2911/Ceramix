@@ -142,7 +142,7 @@ def build_single_unique_cup(model_index):
 
     overall_uniform_scale = random.uniform(0.80, 1.30)
     base_radius = random.uniform(0.040, 0.065) * overall_uniform_scale
-    cup_height = random.uniform(0.135, 0.195) * overall_uniform_scale
+    cup_height = random.uniform(0.095, 0.150) * overall_uniform_scale
     wall_thickness = random.uniform(0.0040, 0.0060) * overall_uniform_scale
 
     foot_radius_fraction = 0.0
