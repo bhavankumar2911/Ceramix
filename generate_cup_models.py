@@ -18,7 +18,7 @@ BODY_PROFILE_SHAPE_OPTIONS = [
     "tapered_wide_top_narrow_base",
     "tapered_narrow_top_wide_base",
     "convex_barrel_bulge",
-    "tapered_cone_with_pulled_foot"]
+    "concave_inward_waist"]
 
 
 def read_requested_model_count_from_command_arguments():
@@ -69,13 +69,8 @@ def compute_wall_radius_at_height_fraction(height_fraction, base_radius, body_pr
         return base_radius - silhouette_deviation_amount * height_fraction
     elif body_profile_shape == "convex_barrel_bulge":
         return base_radius + silhouette_deviation_amount * math.sin(math.pi * height_fraction)
-    elif body_profile_shape == "tapered_cone_with_pulled_foot":
-        foot_constant_radius = base_radius * foot_radius_fraction
-        rim_radius = base_radius + silhouette_deviation_amount
-        if height_fraction <= foot_height_fraction:
-            return foot_constant_radius
-        upper_taper_progress = (height_fraction - foot_height_fraction) / (1.0 - foot_height_fraction)
-        return foot_constant_radius + (rim_radius - foot_constant_radius) * upper_taper_progress
+    elif body_profile_shape == "concave_inward_waist":
+        return base_radius - silhouette_deviation_amount * math.sin(math.pi * height_fraction)
     else:
         return base_radius
 
@@ -147,22 +142,20 @@ def build_single_unique_cup(model_index):
 
     overall_uniform_scale = random.uniform(0.80, 1.30)
     base_radius = random.uniform(0.040, 0.065) * overall_uniform_scale
-    cup_height = random.uniform(0.075, 0.130) * overall_uniform_scale
+    cup_height = random.uniform(0.135, 0.195) * overall_uniform_scale
     wall_thickness = random.uniform(0.0040, 0.0060) * overall_uniform_scale
 
     foot_radius_fraction = 0.0
     foot_height_fraction = 0.0
 
     if chosen_body_profile_shape == "tapered_wide_top_narrow_base":
-        silhouette_deviation_amount = base_radius * random.uniform(0.25, 0.45)
+        silhouette_deviation_amount = base_radius * random.uniform(0.10, 0.20)
     elif chosen_body_profile_shape == "tapered_narrow_top_wide_base":
-        silhouette_deviation_amount = base_radius * random.uniform(0.20, 0.35)
+        silhouette_deviation_amount = base_radius * random.uniform(0.10, 0.20)
     elif chosen_body_profile_shape == "convex_barrel_bulge":
-        silhouette_deviation_amount = base_radius * random.uniform(0.12, 0.30)
-    elif chosen_body_profile_shape == "tapered_cone_with_pulled_foot":
-        silhouette_deviation_amount = base_radius * random.uniform(0.35, 0.65)
-        foot_radius_fraction = random.uniform(0.55, 0.70)
-        foot_height_fraction = random.uniform(0.05, 0.09)
+        silhouette_deviation_amount = base_radius * random.uniform(0.10, 0.20)
+    elif chosen_body_profile_shape == "concave_inward_waist":
+        silhouette_deviation_amount = base_radius * random.uniform(0.12, 0.22)
     else:
         silhouette_deviation_amount = 0.0
 

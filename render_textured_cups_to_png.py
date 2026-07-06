@@ -158,14 +158,24 @@ def setup_render_settings(output_file_path):
 
 
 def enable_gpu_rendering():
-    try:
-        cycles_preferences = bpy.context.preferences.addons['cycles'].preferences
-        cycles_preferences.compute_device_type = 'METAL'
-        cycles_preferences.get_devices()
-        for compute_device in cycles_preferences.devices:
-            compute_device.use = True
-    except Exception as error:
-        print(f"Metal GPU unavailable ({error}), rendering on CPU.")
+    compute_device_type_priority_order = ['OPTIX', 'CUDA', 'HIP', 'ONEAPI', 'METAL']
+    cycles_preferences = bpy.context.preferences.addons['cycles'].preferences
+
+    for candidate_compute_device_type in compute_device_type_priority_order:
+        try:
+            cycles_preferences.compute_device_type = candidate_compute_device_type
+            cycles_preferences.get_devices()
+            available_compute_devices = list(cycles_preferences.devices)
+            if len(available_compute_devices) == 0:
+                continue
+            for compute_device in available_compute_devices:
+                compute_device.use = True
+            print(f"GPU rendering enabled using {candidate_compute_device_type}.")
+            return
+        except TypeError:
+            continue
+
+    print("No supported GPU compute device found, rendering on CPU.")
 
 
 def render_single_textured_model(blend_file_path, output_png_path):
@@ -202,12 +212,19 @@ def render_all_textured_models():
         print(f"No .blend files found in {INPUT_DIRECTORY}")
         return
 
-    print(f"Rendering {len(blend_files)} textured models to {absolute_output_directory}...")
+    print(f"Found {len(blend_files)} textured models in {INPUT_DIRECTORY}...")
     successfully_rendered_count = 0
+    already_rendered_skipped_count = 0
     for blend_file_index, blend_file_path in enumerate(blend_files):
         model_filename = os.path.basename(blend_file_path)
         model_base_name = os.path.splitext(model_filename)[0]
         output_png_path = os.path.join(absolute_output_directory, f"{model_base_name}.png")
+
+        if os.path.isfile(output_png_path):
+            print(f"  [{blend_file_index + 1}/{len(blend_files)}] Skipping {model_base_name}.png, already rendered")
+            already_rendered_skipped_count += 1
+            continue
+
         try:
             absolute_blend_file_path = os.path.abspath(blend_file_path)
             success = render_single_textured_model(absolute_blend_file_path, output_png_path)
@@ -217,7 +234,7 @@ def render_all_textured_models():
         except Exception as error:
             print(f"  Error rendering {blend_file_path}: {error}")
 
-    print(f"\nRender complete. Total rendered: {successfully_rendered_count}")
+    print(f"\nRender complete. Newly rendered: {successfully_rendered_count}, skipped as already present: {already_rendered_skipped_count}")
 
 
 render_all_textured_models()

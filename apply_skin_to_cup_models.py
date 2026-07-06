@@ -138,13 +138,13 @@ def build_image_skin_material(image_file_path):
     return skin_material
 
 
-def build_plain_inner_surface_material():
-    inner_material = bpy.data.materials.new("vessel_inner_surface_plain")
-    inner_material.use_nodes = True
-    principled_shader = inner_material.node_tree.nodes.get("Principled BSDF")
-    principled_shader.inputs["Base Color"].default_value = (0.12, 0.11, 0.10, 1.0)
-    principled_shader.inputs["Roughness"].default_value = 0.85
-    return inner_material
+def build_light_ceramic_inner_surface_material():
+    inner_ceramic_material = bpy.data.materials.new("vessel_inner_surface_ceramic")
+    inner_ceramic_material.use_nodes = True
+    inner_ceramic_principled_shader = inner_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    inner_ceramic_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    inner_ceramic_principled_shader.inputs["Roughness"].default_value = 0.55
+    return inner_ceramic_material
 
 
 def assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material):
@@ -183,8 +183,8 @@ def apply_skin_to_single_blend_file(blend_file_path, image_file_path, output_ble
     correct_seam_uv_discontinuity(vessel_object)
 
     skin_material = build_image_skin_material(image_file_path)
-    inner_material = build_plain_inner_surface_material()
-    assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_material)
+    inner_ceramic_material = build_light_ceramic_inner_surface_material()
+    assign_polygons_to_outer_or_inner_material(vessel_object, skin_material, inner_ceramic_material)
 
     bpy.ops.wm.save_as_mainfile(filepath=output_blend_file_path)
     return True
