@@ -4,11 +4,11 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/cup/design/circle/1"
-OUTPUT_RENDER_DIRECTORY = "output/cup/render/circle/1"
+INPUT_DIRECTORY = "output/cup/design/circle/2"
+OUTPUT_RENDER_DIRECTORY = "output/cup/render/circle/2"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
-RENDER_SAMPLES = 256
+RENDER_SAMPLES = 512
 CAMERA_FRAMING_MARGIN_FACTOR = 1.35
 CAMERA_FIELD_OF_VIEW_DEGREES = 35.0
 CAMERA_AZIMUTH_DEGREES = 35.0
