@@ -6,7 +6,7 @@ import sys
 import os
 from mathutils import Vector
 
-OUTPUT_DIRECTORY = "output/mug_models"
+OUTPUT_DIRECTORY = "output/mug/model"
 BASE_RANDOM_SEED = 42
 REVOLUTION_SEGMENT_COUNT = 96
 WALL_VERTICAL_SEGMENT_COUNT = 48
@@ -15,6 +15,9 @@ SUBDIVISION_RENDER_LEVEL = 2
 
 BODY_PROFILE_SHAPE_OPTIONS = ["straight_cylinder", "convex_belly_outward", "concave_pinch_inward", "wider_top_narrower_base"]
 HANDLE_TYPE_OPTIONS = ["perfect_semicircle", "rectangular_rounded", "question_mark_hook"]
+
+MUG_BODY_MATERIAL_NAME = "mug_body_ceramic_placeholder"
+MUG_HANDLE_MATERIAL_NAME = "mug_handle_ceramic_placeholder"
 
 
 def read_requested_model_count_from_command_arguments():
@@ -42,13 +45,22 @@ def make_object_the_only_active_selection(target_object):
     bpy.context.view_layer.objects.active = target_object
 
 
-def create_ceramic_placeholder_material():
-    ceramic_material = bpy.data.materials.new("ceramic_base_placeholder")
-    ceramic_material.use_nodes = True
-    principled_shader = ceramic_material.node_tree.nodes.get("Principled BSDF")
-    principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
-    principled_shader.inputs["Roughness"].default_value = 0.55
-    return ceramic_material
+def create_mug_body_ceramic_placeholder_material():
+    mug_body_ceramic_material = bpy.data.materials.new(MUG_BODY_MATERIAL_NAME)
+    mug_body_ceramic_material.use_nodes = True
+    mug_body_principled_shader = mug_body_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    mug_body_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    mug_body_principled_shader.inputs["Roughness"].default_value = 0.55
+    return mug_body_ceramic_material
+
+
+def create_mug_handle_ceramic_placeholder_material():
+    mug_handle_ceramic_material = bpy.data.materials.new(MUG_HANDLE_MATERIAL_NAME)
+    mug_handle_ceramic_material.use_nodes = True
+    mug_handle_principled_shader = mug_handle_ceramic_material.node_tree.nodes.get("Principled BSDF")
+    mug_handle_principled_shader.inputs["Base Color"].default_value = (0.92, 0.90, 0.84, 1.0)
+    mug_handle_principled_shader.inputs["Roughness"].default_value = 0.55
+    return mug_handle_ceramic_material
 
 
 def recalculate_outward_face_normals(target_object):
@@ -64,7 +76,7 @@ def build_body_outer_profile_vertices(base_radius, mug_height, body_profile_shap
     for vertical_index in range(1, WALL_VERTICAL_SEGMENT_COUNT + 1):
         height_fraction = vertical_index / WALL_VERTICAL_SEGMENT_COUNT
         height_position = height_fraction * mug_height
-        
+
         if body_profile_shape == "convex_belly_outward":
             wall_radius = base_radius + silhouette_deviation_amount * math.sin(math.pi * height_fraction)
         elif body_profile_shape == "concave_pinch_inward":
@@ -73,7 +85,7 @@ def build_body_outer_profile_vertices(base_radius, mug_height, body_profile_shap
             wall_radius = base_radius + silhouette_deviation_amount * height_fraction
         else:
             wall_radius = base_radius
-        
+
         profile_vertices.append(Vector((max(wall_radius, 0.002), 0.0, height_position)))
     return profile_vertices
 
@@ -270,6 +282,13 @@ def build_question_mark_hook_handle(base_radius, mug_height, wall_thickness):
         wall_thickness)
 
 
+def assign_single_material_to_object(target_object, material):
+    target_object.data.materials.clear()
+    target_object.data.materials.append(material)
+    for polygon in target_object.data.polygons:
+        polygon.material_index = 0
+
+
 def join_mug_body_and_handle(body_object, handle_object):
     bpy.ops.object.select_all(action='DESELECT')
     body_object.select_set(True)
@@ -279,17 +298,13 @@ def join_mug_body_and_handle(body_object, handle_object):
     return body_object
 
 
-def finalize_ceramic_object(mug_object, model_index, ceramic_material):
+def finalize_mug_object(mug_object, model_index):
     recalculate_outward_face_normals(mug_object)
     make_object_the_only_active_selection(mug_object)
     bpy.ops.object.shade_smooth()
     subdivision_modifier = mug_object.modifiers.new("Subdivision", "SUBSURF")
     subdivision_modifier.levels = SUBDIVISION_VIEWPORT_LEVEL
     subdivision_modifier.render_levels = SUBDIVISION_RENDER_LEVEL
-    mug_object.data.materials.clear()
-    mug_object.data.materials.append(ceramic_material)
-    for polygon in mug_object.data.polygons:
-        polygon.material_index = 0
     mug_object.name = "mug_{:03d}".format(model_index)
     mug_object.data.name = "mug_{:03d}_mesh".format(model_index)
 
@@ -315,6 +330,8 @@ def build_single_unique_mug(model_index):
     profile_vertices = build_body_outer_profile_vertices(
         base_radius, mug_height, chosen_body_profile_shape, silhouette_deviation_amount)
     body_object = create_revolved_hollow_body(profile_vertices, wall_thickness)
+    body_ceramic_material = create_mug_body_ceramic_placeholder_material()
+    assign_single_material_to_object(body_object, body_ceramic_material)
 
     if chosen_handle_type == "perfect_semicircle":
         handle_object = build_semicircle_loop_handle(base_radius, mug_height, wall_thickness)
@@ -322,11 +339,11 @@ def build_single_unique_mug(model_index):
         handle_object = build_rounded_rectangle_strap_handle(base_radius, mug_height, wall_thickness)
     else:
         handle_object = build_question_mark_hook_handle(base_radius, mug_height, wall_thickness)
+    handle_ceramic_material = create_mug_handle_ceramic_placeholder_material()
+    assign_single_material_to_object(handle_object, handle_ceramic_material)
 
     mug_object = join_mug_body_and_handle(body_object, handle_object)
-
-    ceramic_material = create_ceramic_placeholder_material()
-    finalize_ceramic_object(mug_object, model_index, ceramic_material)
+    finalize_mug_object(mug_object, model_index)
 
 
 def save_current_scene_as_blend_file(model_index):
