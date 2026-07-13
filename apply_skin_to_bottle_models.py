@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/bottle/model"
-OUTPUT_DIRECTORY = "output/bottle/design/scribble/5"
+OUTPUT_DIRECTORY = "output/bottle/design/triangle/1"
 BODY_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 NECK_TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 0.5
 

@@ -14,6 +14,14 @@ BOTTLE_GENERATE_SCRIPT_PATH = "generate_bottle_models.py"
 BOTTLE_SKIN_SCRIPT_PATH = "apply_skin_to_bottle_models.py"
 BOTTLE_RENDER_SCRIPT_PATH = "render_textured_bottles_to_png.py"
 
+def determine_blender_executable_path():
+    """Extracts custom blender path if provided, cleaning up sys.argv."""
+    global BLENDER_EXECUTABLE_PATH
+    if "--blender-path" in sys.argv:
+        path_flag_index = sys.argv.index("--blender-path")
+        if path_flag_index + 1 < len(sys.argv):
+            BLENDER_EXECUTABLE_PATH = sys.argv[path_flag_index + 1]
+            del sys.argv[path_flag_index:path_flag_index + 2]
 
 def read_requested_instance_count_from_command_arguments():
     if "--instances" in sys.argv:
@@ -100,6 +108,8 @@ def process_single_design_through_skin_and_render(design_image_path):
 
 
 def run_full_bottle_pipeline():
+    determine_blender_executable_path()
+
     requested_instance_count = read_requested_instance_count_from_command_arguments()
     requested_design_category = read_requested_design_category_from_command_arguments()
 
