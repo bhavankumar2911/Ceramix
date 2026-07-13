@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/cup/model"
-OUTPUT_DIRECTORY = "output/cup/design/triangle/5"
+OUTPUT_DIRECTORY = "output/cup/design/scribble/5"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 

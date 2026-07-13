@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/mug/model"
-OUTPUT_DIRECTORY = "output/mug/design/triangle/5"
+OUTPUT_DIRECTORY = "output/mug/design/scribble/5"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 MUG_BODY_MATERIAL_NAME = "mug_body_ceramic_placeholder"
 MUG_HANDLE_MATERIAL_NAME = "mug_handle_ceramic_placeholder"

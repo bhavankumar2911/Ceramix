@@ -4,8 +4,8 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/pitcher/design/square/5"
-OUTPUT_RENDER_DIRECTORY = "output/pitcher/render/square/5"
+INPUT_DIRECTORY = "output/pitcher/design/scribble/3"
+OUTPUT_RENDER_DIRECTORY = "output/pitcher/render/scribble/3"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 512

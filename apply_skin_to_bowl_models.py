@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/bowl/model"
-OUTPUT_DIRECTORY = "output/bowl/design/triangle/5"
+OUTPUT_DIRECTORY = "output/bowl/design/scribble/5"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 
 

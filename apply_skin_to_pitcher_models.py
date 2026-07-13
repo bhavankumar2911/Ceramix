@@ -6,7 +6,7 @@ import os
 import glob
 
 INPUT_DIRECTORY = "output/pitcher/model"
-OUTPUT_DIRECTORY = "output/pitcher/design/square/5"
+OUTPUT_DIRECTORY = "output/pitcher/design/scribble/5"
 TEXTURE_REPEAT_AROUND_CIRCUMFERENCE = 1.0
 PITCHER_BODY_MATERIAL_NAME = "pitcher_body_ceramic_placeholder"
 PITCHER_HANDLE_MATERIAL_NAME = "pitcher_handle_ceramic_placeholder"

@@ -4,8 +4,8 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/mug/design/triangle/5"
-OUTPUT_RENDER_DIRECTORY = "output/mug/render/triangle/5"
+INPUT_DIRECTORY = "output/mug/design/scribble/3"
+OUTPUT_RENDER_DIRECTORY = "output/mug/render/scribble/3"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 512

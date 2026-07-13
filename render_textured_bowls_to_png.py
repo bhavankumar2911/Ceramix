@@ -4,8 +4,8 @@ import os
 import glob
 from mathutils import Vector
 
-INPUT_DIRECTORY = "output/bowl/design/triangle/5"
-OUTPUT_RENDER_DIRECTORY = "output/bowl/render/triangle/5"
+INPUT_DIRECTORY = "output/bowl/design/scribble/5"
+OUTPUT_RENDER_DIRECTORY = "output/bowl/render/scribble/5"
 RENDER_RESOLUTION_X = 1024
 RENDER_RESOLUTION_Y = 1024
 RENDER_SAMPLES = 512
