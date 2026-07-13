@@ -1,4 +1,4 @@
-# Ceramix
+# Ceramix | [Dataset (Zenodo)](https://zenodo.org/records/21336862)
 
 A Blender-based procedural generation pipeline for creating synthetic datasets of textured ceramic vessels. The project automatically generates unique 3D ceramic vessels, applies surface design patterns, and renders high-quality images suitable for computer vision and machine learning research.
 
@@ -301,10 +301,8 @@ As a result, interrupted runs can be resumed without regenerating completed outp
 
 ---
 
-# Dataset
+# Citation
 
-The complete generated dataset is available on Zenodo.
-
-**Zenodo:** **<INSERT ZENODO LINK HERE>**
-
-The repository contains the full generation pipeline, allowing anyone to reproduce the dataset or generate additional vessel instances and design combinations.
+```
+Velladurai, B. K. (2026). Ceramix [Data set]. Zenodo. https://doi.org/10.5281/zenodo.21336862
+```
