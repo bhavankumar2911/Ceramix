@@ -304,5 +304,5 @@ As a result, interrupted runs can be resumed without regenerating completed outp
 # Citation
 
 ```
-Velladurai, B. K. (2026). Ceramix [Data set]. Zenodo. https://doi.org/10.5281/zenodo.21336862
+Velladurai, B. K. (2026). Ceramix [Data set]. Zenodo. https://doi.org/10.5281/zenodo.21336861
 ```
